@@ -96,15 +96,61 @@
             left: 40%;
             /* Allows for manual positioning */
         }
+
+        #game{
+            display: none;
+        }
+
+        #input-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        /* Style for the submit button */
+        #submitButton {
+            background-color: #a01c1c; /* Green */
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin-top: 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background-color 0.3s ease;
+        }
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            margin-right: 10px;
+            width: 200px;
+            box-sizing: border-box; /* Ensure padding and border are included in element's total width */
+        }
+
+        /* Hover effect for the submit button */
+        #submitButton:hover {
+            background-color: #c819df; /* Darker green */
+        }
            
     </style>
 </head>
 
 <body>
     <h1>Kosteczka - proszę zbierać literki</h1>
-    <h2 id="level-text">Level: 1</h2>
-    <canvas id="gameCanvas" width="1000" height="600"></canvas>
-    <button class="restart-btn" onclick="restart()">Restart</button>
+    <div id="game">
+        <h2 id="level-text">Level: 1</h2>
+        <canvas id="gameCanvas" width="1000" height="600"></canvas>
+        <button id="restart" class="restart-btn" onclick="restart()">Restart</button>
+    </div>
+    <div id="input-container">
+        <h1>Aby dowiedziec się czy to jest moja ulubiona Pani Prawnik proszę podać numer indeksu</h1>
+        <input type="text" id="inputField" placeholder="Enter your answer"><br>
+        <button id="submitButton">Submit</button>
+        <p id="input-uwaga"></p>
+    </div>
     <div class="love-heart">❤️</div> <!-- Love heart -->
     <div id="question-container">
         <!-- Your question goes here -->
@@ -287,11 +333,13 @@
 
         // Function to restart the game
         function restart() {
+
             currentLevel = 1;
             loadLevel(currentLevel);
             collectCoins = [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '];
             cube.x = 50;
             cube.y = canvas.height - 100;
+            
         }
 
         // Function to load a level
@@ -301,6 +349,7 @@
             //collectCoins = [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '];
             cube.x = 50;
             cube.y = canvas.height - 100;
+            cube.velocityX = 0;
             updateLevelText(level);
         }
 
@@ -379,7 +428,36 @@
             });
         }
 
+        function startGame() {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
 
+            // Define your game loop function here (gameLoop)
+
+            // Call your game loop function to start the game
+            gameLoop();
+        }
+
+        // Event listener for the submit button
+        document.getElementById('submitButton').addEventListener('click', function() {
+            // Get the value from the input field
+            const inputValue = document.getElementById('inputField').value.trim();
+
+            // Check if the input is correct (example validation)
+            if (inputValue.toLowerCase() === '24879') {
+                // If the input is correct, start the game
+                const jd1 = document.getElementById('input-container');
+                jd1.style.display = 'none';
+                const jd2 = document.getElementById('game');
+                jd2.style.display = 'block';
+            } else {
+                // If the input is incorrect, display an alert or message to the user
+                const levelText = document.getElementById('input-uwaga');
+                levelText.textContent = "ZŁA ODPOWIEDŹ.Tylko Ricia moze wejść";
+                // Clear the input field
+                document.getElementById('inputField').value = '';
+            }
+        });
 
         // Randomize the position of the "No" button initially
         //randomizeNoButtonPosition();
@@ -400,6 +478,9 @@
         }
 
         function displayQuestion() {
+
+            const jd1 = document.getElementById('restart');
+            jd1.style.display = 'none';
             const questionContainer = document.getElementById('question-container');
             questionContainer.style.display = 'block';
 
