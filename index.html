@@ -356,7 +356,7 @@
         // Function to handle key press for jumping and moving
         function handleKeyDown(e) {
             if (e.key === 'ArrowUp' && cube.canJump) { // up arrow key for jumping when canJump is true
-                cube.velocityY = 7; // Adjust jump height here
+                cube.velocityY = 10; // Adjust jump height here
                 cube.jumping = true;
                 cube.canJump = false; // Set canJump to false when jumping
             }
