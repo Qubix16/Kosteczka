@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cube Jumper Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: rgb(129, 0, 0);
+            /* Set red background */
+            overflow: hidden;
+            /* Prevent scrolling */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        canvas {
+            border: 1px solid black;
+            display: block;
+            margin: 0 auto;
+            background-color: white;
+            /* Set white background for canvas */
+        }
+
+        .love-heart {
+            font-size: 50px;
+            color: red;
+            margin-top: 20px;
+            /* Adjust margin as needed */
+        }
+
+        .restart-btn {
+            background-color: #af4ca7;
+            /* Green */
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin-top: 20px;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        #question-container {
+            display: none;
+            text-align: center;
+            font-size: 24px;
+        }
+
+        .answer-btn {
+            background-color: #8d086c;
+            /* Green */
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .answer-btn:hover {
+            background-color: #f02d26;
+            /* Darker green */
+        }
+
+        #no-button {
+            position: absolute;
+            top: 75%;
+            left: 57%;
+            /* Allows for manual positioning */
+            /* Additional styles as needed */
+        }
+        #yes-button {
+            position: absolute;
+            top: 75%;
+            left: 40%;
+            /* Allows for manual positioning */
+        }
+           
+    </style>
+</head>
+
+<body>
+    <h1>Kosteczka - proszę zbierać literki</h1>
+    <h2 id="level-text">Level: 1</h2>
+    <canvas id="gameCanvas" width="1000" height="600"></canvas>
+    <button class="restart-btn" onclick="restart()">Restart</button>
+    <div class="love-heart">❤️</div> <!-- Love heart -->
+    <div id="question-container">
+        <!-- Your question goes here -->
+        <h2>Question:</h2>
+        <p id="question-text"></p>
+        <button id="yes-button" class="answer-btn" onclick="handleAnswer(true)">Tak</button>
+        <button id="no-button" class="answer-btn" onclick="handleAnswer(false)">Nie</button>
+        <p id="question-comment"></p>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Cube object
+        const cube = {
+            x: 50,
+            y: canvas.height - 50,
+            width: 25,
+            height: 25,
+            velocityY: 0,
+            velocityX: 0,
+            jumping: false,
+            canJump: false // New flag to track if cube can jump
+        };
+
+        // Platforms
+        let platforms1 = []; // Platforms array for the current level
+
+        // Letters to collect
+        let letters1 = []; // Letters array for the current level
+
+        // Finish line
+        const finishLine = {
+            x: 0,
+            y: canvas.height - 300,
+            width: 120,
+            height: 20
+        };
+
+        // Collected letters
+        let collectedLetters = [];
+
+        // Custom order of letters to display 34
+        //                    0    1    2    3    4   5   6    7    8    9    10  11  12  13   14    15   16  17  18  19   20   21   22   23  24   25  26   27   28    29  30   31  32   33
+        //                    1    2    1    2    2   2   1    1    1    2    3   1   2   2    3     1    3   2    3   1    1   3    3    3   2    1   2    3    2     3   1    1   2    3
+        const customOrder = ['C', 'Z', 'Y', '_', 'C', 'H', 'C', 'E', 'S', 'Z', '_', 'Z', 'O', 'S', 'T', 'A', 'Ć', '_', 'M', 'O', 'J', 'Ą', '_', 'W', 'A', 'L', 'E', 'N', 'T', 'Y', 'N', 'K', 'Ą', '?'];
+        let collectCoins = [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '];
+
+        // Current level
+        let currentLevel = 1;
+
+        // Levels configuration
+        const levels = [
+            {
+                platforms: [
+                    { x: 0, y: canvas.height - 50, width: 100, height: 10 },
+                    { x: 200, y: canvas.height - 100, width: 50, height: 10 },
+                    { x: 400, y: canvas.height - 150, width: 50, height: 10 },
+                    { x: 675, y: canvas.height - 50, width: 250, height: 10 },
+                    { x: 900, y: canvas.height - 100, width: 50, height: 10 },
+                    { x: 900, y: canvas.height - 150, width: 50, height: 10 },
+                    { x: 900, y: canvas.height - 200, width: 50, height: 10 },
+                    { x: 900, y: canvas.height - 250, width: 50, height: 10 },
+                    { x: 900, y: canvas.height - 300, width: 50, height: 10 },
+                    { x: 750, y: canvas.height - 300, width: 50, height: 10 },
+                    { x: 550, y: canvas.height - 300, width: 100, height: 10 },
+                    { x: 350, y: canvas.height - 300, width: 100, height: 10 },
+                    { x: 150, y: canvas.height - 300, width: 100, height: 10 },
+                ],
+                letters: [
+                    { value: { letter: customOrder[0], index: 0 }, x: 100, y: canvas.height - 100 },
+                    { value: { letter: customOrder[6], index: 6 }, x: 200, y: canvas.height - 150 },
+                    { value: { letter: customOrder[2], index: 2 }, x: 300, y: canvas.height - 200 },
+                    { value: { letter: customOrder[20], index: 20 }, x: 750, y: canvas.height - 100 },
+                    { value: { letter: customOrder[31], index: 31 }, x: 600, y: canvas.height - 150 },
+                    { value: { letter: customOrder[7], index: 7 }, x: 400, y: canvas.height - 200 },
+                    { value: { letter: customOrder[25], index: 25 }, x: 100, y: canvas.height - 330 },
+                    { value: { letter: customOrder[19], index: 19 }, x: 200, y: canvas.height - 330 },
+                    { value: { letter: customOrder[30], index: 30 }, x: 300, y: canvas.height - 330 },
+                    { value: { letter: customOrder[11], index: 11 }, x: 750, y: canvas.height - 330 },
+                    { value: { letter: customOrder[15], index: 15 }, x: 600, y: canvas.height - 330 },
+                    { value: { letter: customOrder[8], index: 8 }, x: 400, y: canvas.height - 330 }
+                ]
+            },
+            {
+                platforms: [
+                    { x: 0, y: canvas.height - 50, width: 100, height: 10 },
+                    { x: 250, y: canvas.height - 25, width: 50, height: 10 },
+                    { x: 450, y: canvas.height - 50, width: 50, height: 10 },
+                    { x: 675, y: canvas.height - 50, width: 50, height: 10 },
+                    { x: 750, y: canvas.height - 100, width: 50, height: 10 },
+                    { x: 900, y: canvas.height - 150, width: 50, height: 10 },
+                    { x: 950, y: canvas.height - 245, width: 50, height: 10 },
+                    { x: 775, y: canvas.height - 300, width: 50, height: 10 },
+                    { x: 900, y: canvas.height - 370, width: 50, height: 10 },
+                    { x: 900, y: canvas.height - 420, width: 50, height: 10 },
+                    { x: 600, y: canvas.height - 490, width: 200, height: 10 },
+                    { x: 200, y: canvas.height - 300, width: 200, height: 10 },
+                ],
+                letters: [
+                    { value: { letter: customOrder[3], index: 3 }, x: 100, y: canvas.height - 100 },
+                    { value: { letter: customOrder[1], index: 1 }, x: 200, y: canvas.height - 100 },
+                    { value: { letter: customOrder[17], index: 17 }, x: 300, y: canvas.height - 100 },
+                    { value: { letter: customOrder[9], index: 9 }, x: 450, y: canvas.height - 100 },
+                    { value: { letter: customOrder[32], index: 32 }, x: 650, y: canvas.height - 150 },
+                    { value: { letter: customOrder[4], index: 4 }, x: 850, y: canvas.height - 200 },
+                    { value: { letter: customOrder[26], index: 26 }, x: 600, y: canvas.height - 530 },
+                    { value: { letter: customOrder[13], index: 13 }, x: 500, y: canvas.height - 550 },
+                    { value: { letter: customOrder[24], index: 24 }, x: 420, y: canvas.height - 430 },
+                    { value: { letter: customOrder[12], index: 12 }, x: 775, y: canvas.height - 330 },
+                    { value: { letter: customOrder[28], index: 28 }, x: 150, y: canvas.height - 370 },
+                    { value: { letter: customOrder[5], index: 5 }, x: 400, y: canvas.height - 330 }
+                ]
+            },
+            {
+                platforms: [
+                    { x: 0, y: canvas.height - 50, width: 100, height: 10 },
+                    { x: 200, y: canvas.height - 50, width: 50, height: 10 },
+                    { x: 200, y: canvas.height - 100, width: 50, height: 10 },
+                    { x: 200, y: canvas.height - 150, width: 50, height: 10 },
+                    { x: 200, y: canvas.height - 200, width: 50, height: 10 },
+                    { x: 200, y: canvas.height - 250, width: 50, height: 10 },
+                    { x: 200, y: canvas.height - 300, width: 50, height: 10 },
+                    { x: 200, y: canvas.height - 350, width: 50, height: 10 },
+                    { x: 200, y: canvas.height - 400, width: 50, height: 10 },
+
+                    { x: 500, y: canvas.height - 300, width: 50, height: 10 },
+                    { x: 500, y: canvas.height - 50, width: 50, height: 10 },
+                    { x: 550, y: canvas.height - 100, width: 50, height: 10 },
+                    { x: 600, y: canvas.height - 150, width: 50, height: 10 },
+                    { x: 650, y: canvas.height - 200, width: 50, height: 10 },
+                    { x: 700, y: canvas.height - 250, width: 50, height: 10 },
+
+                    { x: 600, y: canvas.height - 350, width: 50, height: 10 },
+                    { x: 650, y: canvas.height - 300, width: 50, height: 10 },
+
+                    { x: 450, y: canvas.height - 100, width: 50, height: 10 },
+                    { x: 400, y: canvas.height - 150, width: 50, height: 10 },
+                    { x: 350, y: canvas.height - 200, width: 50, height: 10 },
+                    { x: 300, y: canvas.height - 250, width: 50, height: 10 },
+
+                    { x: 400, y: canvas.height - 350, width: 50, height: 10 },
+                    { x: 350, y: canvas.height - 300, width: 50, height: 10 },
+
+                    { x: 875, y: canvas.height - 50, width: 25, height: 10 },
+                    { x: 850, y: canvas.height - 50, width: 25, height: 10 },
+                    { x: 825, y: canvas.height - 100, width: 25, height: 10 },
+                    { x: 800, y: canvas.height - 150, width: 25, height: 10 },
+                    { x: 800, y: canvas.height - 200, width: 25, height: 10 },
+                    { x: 800, y: canvas.height - 250, width: 25, height: 10 },
+                    { x: 800, y: canvas.height - 300, width: 25, height: 10 },
+                    { x: 800, y: canvas.height - 350, width: 25, height: 10 },
+                    { x: 800, y: canvas.height - 400, width: 25, height: 10 },
+
+                    { x: 900, y: canvas.height - 50, width: 25, height: 10 },
+                    { x: 925, y: canvas.height - 100, width: 25, height: 10 },
+                    { x: 950, y: canvas.height - 150, width: 25, height: 10 },
+                    { x: 950, y: canvas.height - 200, width: 25, height: 10 },
+                    { x: 950, y: canvas.height - 250, width: 25, height: 10 },
+                    { x: 950, y: canvas.height - 300, width: 25, height: 10 },
+                    { x: 950, y: canvas.height - 350, width: 25, height: 10 },
+                    { x: 950, y: canvas.height - 400, width: 25, height: 10 },
+                ],
+                letters: [
+                    { value: { letter: customOrder[10], index: 10 }, x: 100, y: canvas.height - 100 },
+                    { value: { letter: customOrder[14], index: 14 }, x: 550, y: canvas.height - 350 },
+                    { value: { letter: customOrder[29], index: 29 }, x: 500, y: canvas.height - 200 },
+                    { value: { letter: customOrder[22], index: 22 }, x: 875, y: canvas.height - 100 },
+                    { value: { letter: customOrder[16], index: 16 }, x: 600, y: canvas.height - 250 },
+                    { value: { letter: customOrder[27], index: 27 }, x: 400, y: canvas.height - 200 },
+                    { value: { letter: customOrder[18], index: 18 }, x: 100, y: canvas.height - 330 },
+                    { value: { letter: customOrder[23], index: 23 }, x: 400, y: canvas.height - 420 },
+                    { value: { letter: customOrder[21], index: 21 }, x: 900, y: canvas.height - 400 },
+                    { value: { letter: customOrder[33], index: 33 }, x: 750, y: canvas.height - 330 },
+                ]
+            }
+            // Add more levels as needed
+        ];
+
+        // Function to restart the game
+        function restart() {
+            currentLevel = 1;
+            loadLevel(currentLevel);
+            collectCoins = [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '];
+            cube.x = 50;
+            cube.y = canvas.height - 100;
+        }
+
+        // Function to load a level
+        function loadLevel(level) {
+            platforms1 = levels[level - 1].platforms;
+            letters1 = JSON.parse(JSON.stringify(levels[level - 1].letters));
+            //collectCoins = [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '];
+            cube.x = 50;
+            cube.y = canvas.height - 100;
+            updateLevelText(level);
+        }
+
+        // Function to handle key press for jumping and moving
+        function handleKeyDown(e) {
+            if (e.key === 'ArrowUp' && cube.canJump) { // up arrow key for jumping when canJump is true
+                cube.velocityY = 7; // Adjust jump height here
+                cube.jumping = true;
+                cube.canJump = false; // Set canJump to false when jumping
+            }
+            if (e.key === 'ArrowLeft') { // left arrow key for moving left
+                cube.velocityX = -5; // Adjust movement speed here
+            }
+            if (e.key === 'ArrowRight') { // right arrow key for moving right
+                cube.velocityX = 5; // Adjust movement speed here
+            }
+        }
+
+        function handleKeyUp(e) {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                cube.velocityX = 0;
+            }
+        }
+
+        function handleAnswer(isYes) {
+            if (isYes) {
+                const levelText = document.getElementById('question-comment');
+                const questionContainer = document.getElementById('no-button');
+                questionContainer.style.display = 'none';
+                levelText.textContent = "Kocham cię i przepraszam za bycie chujem :( Lov u very much. Jak wybrałaś tą opcje to proszę daj znać";
+            } else {
+                const Text = document.getElementById('question-comment');
+                Text.textContent = "Nie przyjmuje takiej odpowiedzi ;)";
+                randomizeNoButtonPosition();
+            }
+        }
+
+
+        let sizex = 100;
+        let sizey = 50;
+        let fontsize = 20; 
+        function resizeYesButton() {
+            const randomWidth = 20; // Random width between 100px and 300px
+            const randomHeight = Math.floor(Math.random() * 200) + 100; // Random height between 100px and 300px
+            sizex = sizex+20;
+            sizey = sizey+20;
+            fontsize = fontsize +5;
+            // Set the new size for the "Yes" button
+            $('#yes-button').css({
+                'width': sizex + 'px',
+                'height': sizey + 'px',
+                'font-size': fontsize + 'px'
+
+            });
+        }
+
+        // Function to randomize the position of the "No" button
+        function randomizeNoButtonPosition() {
+            const screenWidth = $(window).width();
+            const screenHeight = $(window).height();
+            const buttonWidth = $('#no-button').width();
+            const buttonHeight = $('#no-button').height();
+
+            // Calculate the maximum allowed position for the "No" button
+            const maxX = screenWidth - buttonWidth;
+            const maxY = screenHeight - buttonHeight;
+
+            // Generate random position for the "No" button
+            const randomX = Math.floor(Math.random() * 1000);
+            const randomY = Math.floor(Math.random() * 600);
+
+            // Set the new position for the "No" button
+            $('#no-button').css({
+                'left': randomX + 'px',
+                'top': randomY + 'px'
+            });
+        }
+
+
+
+        // Randomize the position of the "No" button initially
+        //randomizeNoButtonPosition();
+
+        // Attach click event listener to the "No" button to randomize its position
+        $('#no-button').click(randomizeNoButtonPosition);
+        $('#no-button').click(resizeYesButton);
+
+        // Add event listeners for keydown and keyup events
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+        const noButton = document.getElementById('no-button');
+        noButton.addEventListener('click', randomizeNoButtonPosition);
+
+        function updateLevelText(level) {
+            const levelText = document.getElementById('level-text');
+            levelText.textContent = 'Level: ' + level;
+        }
+
+        function displayQuestion() {
+            const questionContainer = document.getElementById('question-container');
+            questionContainer.style.display = 'block';
+
+
+            canvas.parentNode.removeChild(canvas);
+            document.getElementById('question-text').textContent = collectCoins.join('');
+        }
+
+
+        // Main game loop
+        function gameLoop() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw cube
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(cube.x, cube.y, cube.width, cube.height);
+
+            // Draw letters to collect
+            ctx.fillStyle = 'orange';
+            letters1.forEach(letter => {
+                ctx.fillText(letter.value.letter, letter.x, letter.y);
+            });
+
+            // Draw platforms
+            ctx.fillStyle = 'green';
+            platforms1.forEach(platform => {
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+            });
+
+            // Draw finish line
+            ctx.fillStyle = 'red';
+            ctx.fillRect(finishLine.x, finishLine.y, finishLine.width, finishLine.height);
+
+            // Draw collected letters
+            ctx.fillStyle = 'black';
+            ctx.font = '20px Arial';
+            ctx.fillText('                                       ' + collectCoins.join(''), 10, 30);
+
+            // Gravity effect
+            if (cube.jumping) {
+                cube.velocityY -= 0.2; // Adjust gravity here
+            }
+
+
+            // Move cube horizontally
+            cube.x += cube.velocityX;
+
+            // Move cube vertically
+            cube.y -= cube.velocityY;
+
+            // Check if cube is stepping on any platform
+            let isSteppingOnPlatform = false;
+            platforms1.forEach(platform => {
+                if (cube.x < platform.x + platform.width &&
+                    cube.x + cube.width > platform.x &&
+                    cube.y + cube.height === platform.y) {
+                    isSteppingOnPlatform = true;
+                }
+            });
+
+            // If cube is stepping on any platform or ground, allow jumping
+            cube.canJump = isSteppingOnPlatform || cube.y >= canvas.height - cube.height;
+
+
+            if (!isSteppingOnPlatform && cube.y < canvas.height - cube.height) {
+                cube.velocityY -= 0.2; // Adjust fall speed here
+            }
+
+
+            if (cube.y >= canvas.height - cube.height) {
+                //cube.jumping = false;
+                //cube.velocityY = 0;
+            }
+
+            // Check for collision with platforms
+            platforms1.forEach(platform => {
+                if (cube.x < platform.x + platform.width &&
+                    cube.x + cube.width > platform.x &&
+                    cube.y < platform.y + platform.height &&
+                    cube.y + cube.height > platform.y) {
+                    // If collision detected, stop the jump
+                    cube.jumping = false;
+                    cube.velocityY = 0;
+                    cube.y = platform.y - cube.height;
+                }
+            });
+
+            // Check for collision with finish line
+            if (cube.x < finishLine.x + finishLine.width &&
+                cube.x + cube.width > finishLine.x &&
+                cube.y < finishLine.y + finishLine.height &&
+                cube.y + cube.height > finishLine.y) {
+                if (currentLevel != 3) {
+                    alert("JESTEŚ MEGA PIĘKNA");
+                    currentLevel++;
+                    cube.x = 50;
+                    cube.y = canvas.height - 300;
+                    loadLevel(currentLevel);
+                } else {
+                    alert("BRAWO KOTEK");
+                    displayQuestion();
+                }
+            }
+
+            // Check for collision with letters to 
+
+            letters1.forEach((letter, index) => {
+                if (cube.x < letter.x + 30 &&
+                    cube.x + cube.width > letter.x &&
+                    cube.y < letter.y + 30 &&
+                    cube.y + cube.height > letter.y) {
+                    collectCoins[letter.value.index] = letter.value.letter; // Add the collected letter
+                    letters1.splice(index, 1); // Remove the collected letter from the array
+                }
+            });
+
+            if (cube.y > canvas.height) {
+                //console.log("GAME OVER");
+                restart(); // Restart the game when cube falls off the canvas
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+        currentLevel = 1
+        //displayQuestion();
+        loadLevel(currentLevel); // Load the initial level
+        gameLoop(); // Start the game loop
+    </script>
+</body>
+
+</html>
